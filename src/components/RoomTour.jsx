@@ -26,13 +26,19 @@ export default function RoomTour() {
   const cameraRef = useRef(null);
   const cameraTargetRef = useRef(new THREE.Vector3(0, 1.5, 0));
   const explorerModeRef = useRef(false);
+
+  // Drag look-around state references
+  const isDraggingRef = useRef(false);
+  const dragRotationRef = useRef({ x: 0, y: 0 });
+  const previousMousePositionRef = useRef({ x: 0, y: 0 });
+  const lastScrollYRef = useRef(0);
   
   // Shared state of camera position for animation
   const camStateRef = useRef({
-    // Initial camera coordinates (Entrance)
-    x: 3.5,
-    y: 5.5,
-    z: 9.0,
+    // Initial camera coordinates (Entrance - wide overview)
+    x: 5.5,
+    y: 7.5,
+    z: 11.0,
     tx: -1.0,
     ty: 1.0,
     tz: 1.0,
@@ -74,7 +80,7 @@ export default function RoomTour() {
     scene.fog = new THREE.FogExp2("#050409", 0.03);
 
     const camera = new THREE.PerspectiveCamera(
-      60,
+      75, // Increased FOV from 60 to 75 for a wider, spacious interior view
       window.innerWidth / window.innerHeight,
       0.1,
       1000
@@ -241,6 +247,12 @@ export default function RoomTour() {
       scrub: 1.5,
       animation: scrollTl,
       invalidateOnRefresh: true,
+      snap: {
+        snapTo: 1 / 6,
+        duration: { min: 0.2, max: 0.6 },
+        delay: 0.15,
+        ease: "power2.out",
+      },
       onLeave: (self) => {
         // When we reach the absolute bottom (Section 7), instantly jump back to Section 2 (Living Room)
         // Section 2 is located at exactly 1/6 of the total scroll height
@@ -344,6 +356,43 @@ export default function RoomTour() {
     };
     window.addEventListener("mousemove", handleMouseMove);
 
+    // --- Drag Look-around Handlers ---
+    const handleDragStart = (e) => {
+      if (explorerModeRef.current) return;
+      isDraggingRef.current = true;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      previousMousePositionRef.current = { x: clientX, y: clientY };
+    };
+
+    const handleDragMove = (e) => {
+      if (!isDraggingRef.current || explorerModeRef.current) return;
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - previousMousePositionRef.current.x;
+      const deltaY = clientY - previousMousePositionRef.current.y;
+      
+      // Update look rotation angles
+      dragRotationRef.current.y -= deltaX * 0.003;
+      dragRotationRef.current.x = Math.max(-0.9, Math.min(0.9, dragRotationRef.current.x - deltaY * 0.003));
+      
+      previousMousePositionRef.current = { x: clientX, y: clientY };
+    };
+
+    const handleDragEnd = () => {
+      isDraggingRef.current = false;
+    };
+
+    window.addEventListener("mousedown", handleDragStart);
+    window.addEventListener("mousemove", handleDragMove);
+    window.addEventListener("mouseup", handleDragEnd);
+    
+    window.addEventListener("touchstart", handleDragStart, { passive: true });
+    window.addEventListener("touchmove", handleDragMove, { passive: true });
+    window.addEventListener("touchend", handleDragEnd);
+
     // --- Render Loop ---
     let animationFrameId;
     const tick = () => {
@@ -376,7 +425,29 @@ export default function RoomTour() {
           camState.ty - mouse.current.y * 0.6,
           camState.tz
         );
-        camera.lookAt(cameraTargetRef.current);
+
+        // --- Calculate drag-look rotation relative to default look direction ---
+        const dir = new THREE.Vector3().subVectors(cameraTargetRef.current, camera.position);
+        
+        // Check if user is scrolling to slowly reset look-around offsets
+        const currentScrollY = window.scrollY;
+        const isScrolling = Math.abs(currentScrollY - lastScrollYRef.current) > 1.5;
+        lastScrollYRef.current = currentScrollY;
+
+        if (isScrolling && !isDraggingRef.current) {
+          dragRotationRef.current.x += (0 - dragRotationRef.current.x) * 0.08;
+          dragRotationRef.current.y += (0 - dragRotationRef.current.y) * 0.08;
+        }
+
+        // Calculate pitch (around default right axis) and yaw (world Y)
+        const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+        const pitchQuat = new THREE.Quaternion().setFromAxisAngle(right, dragRotationRef.current.x);
+        const yawQuat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dragRotationRef.current.y);
+        
+        dir.applyQuaternion(pitchQuat).applyQuaternion(yawQuat);
+        
+        const finalTarget = new THREE.Vector3().addVectors(camera.position, dir);
+        camera.lookAt(finalTarget);
       }
 
       // Render scene
@@ -398,6 +469,12 @@ export default function RoomTour() {
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("mousedown", handleDragStart);
+      window.removeEventListener("mousemove", handleDragMove);
+      window.removeEventListener("mouseup", handleDragEnd);
+      window.removeEventListener("touchstart", handleDragStart);
+      window.removeEventListener("touchmove", handleDragMove);
+      window.removeEventListener("touchend", handleDragEnd);
       
       cancelAnimationFrame(animationFrameId);
 
@@ -468,7 +545,7 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            <span className="card-tag">Khu vực 01</span>
+            {/* <span className="card-tag">Khu vực 01</span> */}
             <h2>Phòng Khách & Bếp</h2>
             <p>
               Không gian sinh hoạt chung rộng rãi nằm ở nửa trước căn hộ, kết hợp hài hòa giữa phòng khách tiện nghi tràn ngập ánh sáng và bếp ăn ấm cúng.
@@ -478,7 +555,7 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            <span className="card-tag">Khu vực 02</span>
+            {/* <span className="card-tag">Khu vực 02</span> */}
             <h2>Phòng Ngủ Master</h2>
             <p>
               Phòng ngủ chính rộng rãi nằm ở góc sau bên phải căn hộ. Tích hợp giường ngủ cỡ lớn, thiết kế màu sắc tối giản và sang trọng.
@@ -488,7 +565,7 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            <span className="card-tag">Khu vực 03</span>
+            {/* <span className="card-tag">Khu vực 03</span> */}
             <h2>Phòng Ngủ Thứ Hai</h2>
             <p>
               Phòng ngủ phụ nằm kế bên phòng ngủ chính, có diện tích vừa vặn, thích hợp làm phòng cho trẻ nhỏ, phòng làm việc hoặc phòng đón khách nghỉ ngơi.
@@ -498,7 +575,7 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            <span className="card-tag">Khu vực 04</span>
+            {/* <span className="card-tag">Khu vực 04</span> */}
             <h2>Nhà Vệ Sinh</h2>
             <p>
               Khu vực vệ sinh được thiết kế tối giản, sạch sẽ, trang bị đầy đủ các vật dụng tiện nghi hiện đại và lát gạch ốp chống trơn trượt sang trọng.
@@ -508,7 +585,7 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            <span className="card-tag">Khu vực 05</span>
+            {/* <span className="card-tag">Khu vực 05</span> */}
             <h2>Nhà Tắm</h2>
             <p>
               Phòng tắm kính đứng sang trọng ngăn nước vách ngăn hiện đại, hệ thống vòi hoa sen cao cấp đem lại không gian thư giãn lý tưởng sau ngày dài.
@@ -518,7 +595,7 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            <span className="card-tag">Khu vực 01 (Lặp lại)</span>
+            {/* <span className="card-tag">Khu vực 01 (Lặp lại)</span> */}
             <h2>Phòng Khách & Bếp</h2>
             <p>
               Hành trình vòng tròn khép kín hoàn tất. Bạn đã quay trở lại phòng khách và bếp. Tiếp tục cuộn chuột để bắt đầu vòng tuần hoàn tiếp theo!

@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap");
-
 :root {
   --background: #050409;
   --foreground: #ffffff;
@@ -18,11 +16,11 @@
 
 html,
 body {
+  font-family: var(--font-body), sans-serif;
   width: 100%;
   overflow-x: hidden;
   background-color: var(--background);
   color: var(--foreground);
-  font-family: "Outfit", sans-serif;
   -webkit-font-smoothing: antialiased;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -255,7 +253,6 @@ body {
   border: none;
   border-radius: 12px;
   color: white;
-  font-family: inherit;
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
@@ -306,7 +303,6 @@ body {
   border: 1px solid var(--card-border);
   border-radius: 12px;
   color: white;
-  font-family: inherit;
   font-weight: 600;
   font-size: 0.85rem;
   letter-spacing: 1px;
@@ -360,7 +356,6 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 14px;
-  font-family: "Courier New", Courier, monospace;
   font-size: 0.85rem;
   color: var(--primary);
   line-height: 1.6;
@@ -376,7 +371,6 @@ body {
   color: white;
   border-radius: 10px;
   cursor: pointer;
-  font-family: inherit;
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 1px;

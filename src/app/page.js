@@ -14,7 +14,6 @@ const RoomTour = dynamic(() => import("@/components/RoomTour"), {
       justifyContent: "center",
       backgroundColor: "#050409",
       color: "#ffffff",
-      fontFamily: "sans-serif",
       fontSize: "1.2rem",
       letterSpacing: "2px"
     }}>
