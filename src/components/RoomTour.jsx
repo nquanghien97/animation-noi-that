@@ -229,6 +229,15 @@ export default function RoomTour() {
     );
 
     // --- Camera Paths & Scrollytelling Setup ---
+    let isLoopJumping = false;
+    const handleBlockScroll = (e) => {
+      if (isLoopJumping) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("wheel", handleBlockScroll, { passive: false });
+    window.addEventListener("touchmove", handleBlockScroll, { passive: false });
+
     const camState = camStateRef.current;
     camera.position.set(camState.x, camState.y, camState.z);
     cameraRef.current = camera;
@@ -244,16 +253,18 @@ export default function RoomTour() {
       trigger: containerRef.current,
       start: "top top",
       end: "bottom bottom",
-      scrub: 1.5,
+      scrub: 2.5, // Increased from 1.5 to 2.5 for a slower, heavier cinematic camera glide
       animation: scrollTl,
       invalidateOnRefresh: true,
       snap: {
         snapTo: 1 / 6,
-        duration: { min: 0.2, max: 0.6 },
-        delay: 0.15,
+        duration: { min: 0.3, max: 0.8 }, // Slower snap animation
+        delay: 0.1,
         ease: "power2.out",
       },
       onLeave: (self) => {
+        isLoopJumping = true;
+        
         // When we reach the absolute bottom (Section 7), instantly jump back to Section 2 (Living Room)
         // Section 2 is located at exactly 1/6 of the total scroll height
         const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
@@ -268,6 +279,11 @@ export default function RoomTour() {
         
         // Force the timeline to instantly render the progress at 1/6 (Section 2)
         scrollTl.progress(1 / 6);
+
+        // Temporarily block scroll momentum from immediately scrolling into the bedroom
+        gsap.delayedCall(0.35, () => {
+          isLoopJumping = false;
+        });
       }
     });
     scrollTriggerRef.current = trigger;
@@ -475,6 +491,8 @@ export default function RoomTour() {
       window.removeEventListener("touchstart", handleDragStart);
       window.removeEventListener("touchmove", handleDragMove);
       window.removeEventListener("touchend", handleDragEnd);
+      window.removeEventListener("wheel", handleBlockScroll);
+      window.removeEventListener("touchmove", handleBlockScroll);
       
       cancelAnimationFrame(animationFrameId);
 
@@ -545,7 +563,6 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            {/* <span className="card-tag">Khu vực 01</span> */}
             <h2>Phòng Khách & Bếp</h2>
             <p>
               Không gian sinh hoạt chung rộng rãi nằm ở nửa trước căn hộ, kết hợp hài hòa giữa phòng khách tiện nghi tràn ngập ánh sáng và bếp ăn ấm cúng.
@@ -555,7 +572,6 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            {/* <span className="card-tag">Khu vực 02</span> */}
             <h2>Phòng Ngủ Master</h2>
             <p>
               Phòng ngủ chính rộng rãi nằm ở góc sau bên phải căn hộ. Tích hợp giường ngủ cỡ lớn, thiết kế màu sắc tối giản và sang trọng.
@@ -565,7 +581,6 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            {/* <span className="card-tag">Khu vực 03</span> */}
             <h2>Phòng Ngủ Thứ Hai</h2>
             <p>
               Phòng ngủ phụ nằm kế bên phòng ngủ chính, có diện tích vừa vặn, thích hợp làm phòng cho trẻ nhỏ, phòng làm việc hoặc phòng đón khách nghỉ ngơi.
@@ -575,17 +590,6 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            {/* <span className="card-tag">Khu vực 04</span> */}
-            <h2>Nhà Vệ Sinh</h2>
-            <p>
-              Khu vực vệ sinh được thiết kế tối giản, sạch sẽ, trang bị đầy đủ các vật dụng tiện nghi hiện đại và lát gạch ốp chống trơn trượt sang trọng.
-            </p>
-          </div>
-        </section>
-
-        <section className="narrative-section">
-          <div className="glass-card">
-            {/* <span className="card-tag">Khu vực 05</span> */}
             <h2>Nhà Tắm</h2>
             <p>
               Phòng tắm kính đứng sang trọng ngăn nước vách ngăn hiện đại, hệ thống vòi hoa sen cao cấp đem lại không gian thư giãn lý tưởng sau ngày dài.
@@ -595,7 +599,15 @@ export default function RoomTour() {
 
         <section className="narrative-section">
           <div className="glass-card">
-            {/* <span className="card-tag">Khu vực 01 (Lặp lại)</span> */}
+            <h2>Nhà Vệ Sinh</h2>
+            <p>
+              Khu vực vệ sinh được thiết kế tối giản, sạch sẽ, trang bị đầy đủ các vật dụng tiện nghi hiện đại và lát gạch ốp chống trơn trượt sang trọng.
+            </p>
+          </div>
+        </section>
+
+        <section className="narrative-section">
+          <div className="glass-card">
             <h2>Phòng Khách & Bếp</h2>
             <p>
               Hành trình vòng tròn khép kín hoàn tất. Bạn đã quay trở lại phòng khách và bếp. Tiếp tục cuộn chuột để bắt đầu vòng tuần hoàn tiếp theo!
