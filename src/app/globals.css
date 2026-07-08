@@ -1,34 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap");
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --background: #050409;
+  --foreground: #ffffff;
+  --primary: #00f0ff;
+  --secondary: #ff007f;
+  --text-muted: #8e8a9f;
+  --card-bg: rgba(13, 10, 24, 0.45);
+  --card-border: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -37,13 +16,449 @@ body {
   margin: 0;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+html,
+body {
+  width: 100%;
+  overflow-x: hidden;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: "Outfit", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* Custom Scrollbar for premium feel */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Layout container which stretches 700vh for 7 scroll stops */
+.scrollytelling-container {
+  position: relative;
+  width: 100%;
+  height: 700vh;
+}
+
+/* Canvas wrapper is pinned fixed to the screen */
+.canvas-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none; /* Mouse moves pass through, JS captures global mouse movements */
+}
+
+.webgl-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--background);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(255, 255, 255, 0.05);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s infinite linear;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
+
+.loading-text {
+  font-size: 0.95rem;
+  letter-spacing: 4px;
+  font-weight: 700;
+  color: var(--foreground);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Scroll content containing text cards overlays the 3D canvas */
+.overlay-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.overlay-content.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.narrative-section {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  padding-left: 8%;
+  padding-right: 8%;
+}
+
+/* Align cards differently on scroll to keep layout dynamic */
+.narrative-section:nth-child(even) {
+  justify-content: flex-end;
+}
+
+/* Glassmorphism Card Style */
+.glass-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--card-border);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              0 0 100px rgba(77, 29, 138, 0.15);
+  transform: translateY(0);
+  transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 240, 255, 0.3);
+  box-shadow: 0 35px 70px rgba(0, 0, 0, 0.7), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.15),
+              0 0 120px rgba(0, 240, 255, 0.15);
+}
+
+.card-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--primary);
+  margin-bottom: 12px;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.narrative-section:nth-child(even) .card-tag {
+  color: var(--secondary);
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+}
+
+.glass-card h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #ffffff 50%, var(--text-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glass-card p {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Interactive elements in cards */
+.scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.mouse-wheel {
+  width: 20px;
+  height: 32px;
+  border: 2px solid var(--text-muted);
+  border-radius: 10px;
+  position: relative;
+}
+
+.mouse-wheel::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 8px;
+  background-color: var(--primary);
+  border-radius: 2px;
+  animation: scrollWheelAnim 1.6s infinite;
+}
+
+@keyframes scrollWheelAnim {
+  0% {
+    top: 6px;
+    opacity: 1;
+  }
+  50% {
+    top: 16px;
+    opacity: 0.1;
+  }
+  100% {
+    top: 6px;
+    opacity: 1;
+  }
+}
+
+.reset-scroll-btn {
+  margin-top: 24px;
+  padding: 14px 28px;
+  background: linear-gradient(135deg, var(--secondary) 0%, #b30059 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(255, 0, 127, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reset-scroll-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(255, 0, 127, 0.5);
+}
+
+/* UI Elements fixed to the screen */
+.fixed-ui {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10;
+  pointer-events: none; /* let mouse scroll pass through */
+}
+
+.logo-text {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: #ffffff;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.logo-text:hover {
+  opacity: 0.8;
+}
+
+/* Explorer Toggle Button */
+.explorer-toggle-btn {
+  position: absolute;
+  top: 40px;
+  right: 40px;
+  padding: 12px 24px;
+  background: rgba(13, 10, 24, 0.6);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  color: white;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.explorer-toggle-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: black;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+}
+
+.explorer-toggle-btn.active {
+  background: var(--secondary);
+  border-color: var(--secondary);
+  color: white;
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.25);
+}
+
+/* Coordinate HUD */
+.coords-hud {
+  position: fixed;
+  bottom: 40px;
+  left: 40px;
+  z-index: 20;
+  max-width: 340px;
+  background: rgba(13, 10, 24, 0.7);
+  pointer-events: auto; /* Allow HUD interaction */
+}
+
+.coords-hud h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.hud-instruction {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.coords-display {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 14px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  color: var(--primary);
+  line-height: 1.6;
+  white-space: pre-line;
+  margin-bottom: 16px;
+}
+
+.coords-copy-btn {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.coords-copy-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: black;
+}
+
+/* Elegant Scroll Progress Bar */
+.pagination {
+  position: absolute;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 180px;
+  width: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.pagination-bar {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--secondary), var(--primary));
+  border-radius: 3px;
+  transform-origin: top;
+  transform: scaleY(0); /* Animated by GSAP ScrollTrigger */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .narrative-section {
+    padding-left: 20px;
+    padding-right: 20px;
+    justify-content: center !important;
+  }
+  .glass-card {
+    padding: 30px 24px;
+    max-width: 100%;
+  }
+  .glass-card h2 {
+    font-size: 1.8rem;
+  }
+  .logo-text {
+    top: 24px;
+    left: 24px;
+    font-size: 0.95rem;
+  }
+  .explorer-toggle-btn {
+    top: 20px;
+    right: 20px;
+    padding: 8px 16px;
+    font-size: 0.75rem;
+  }
+  .coords-hud {
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    max-width: none;
+    padding: 20px;
+  }
+  .pagination {
+    right: 16px;
+    height: 120px;
+  }
+}
+
+/* Cinematic Fade Overlay */
+.fade-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--background);
+  z-index: 99; /* Under loading-overlay (100) but above cards (2) and logo (10) */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+}
+
