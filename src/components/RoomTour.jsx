@@ -13,6 +13,9 @@ export default function RoomTour() {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const [explorerMode, setExplorerMode] = useState(false);
+  
+  // Detect mobile for FOV and touch handling
+  const isMobileRef = useRef(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -53,6 +56,14 @@ export default function RoomTour() {
         scrollTriggerRef.current.disable();
         controlsRef.current.enabled = true;
         
+        // Lock page scroll to let OrbitControls handle all mousewheel zooms cleanly
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+
+        // Set camera FOV closer (narrower angle for detailed close-ups)
+        cameraRef.current.fov = isMobileRef.current ? 55 : 42;
+        cameraRef.current.updateProjectionMatrix();
+
         // Reset controls target to the current lookAt coordinate
         controlsRef.current.target.copy(cameraTargetRef.current);
         controlsRef.current.update();
@@ -61,6 +72,14 @@ export default function RoomTour() {
         controlsRef.current.enabled = false;
         scrollTriggerRef.current.enable();
         
+        // Restore page scroll
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+
+        // Restore camera FOV wider for scroll tour (wider on mobile)
+        cameraRef.current.fov = isMobileRef.current ? 90 : 75;
+        cameraRef.current.updateProjectionMatrix();
+
         // Return camera to animated timeline state
         const state = camStateRef.current;
         cameraRef.current.position.set(state.x, state.y, state.z);
@@ -79,8 +98,12 @@ export default function RoomTour() {
     scene.background = new THREE.Color("#050409");
     scene.fog = new THREE.FogExp2("#050409", 0.03);
 
+    // Detect mobile screen width for FOV and touch adjustments
+    isMobileRef.current = window.innerWidth <= 768;
+    const baseFOV = isMobileRef.current ? 90 : 75; // Much wider FOV on mobile for broader view
+
     const camera = new THREE.PerspectiveCamera(
-      75, // Increased FOV from 60 to 75 for a wider, spacious interior view
+      baseFOV,
       window.innerWidth / window.innerHeight,
       0.1,
       1000
@@ -129,6 +152,7 @@ export default function RoomTour() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.enableZoom = false; // Disable default orbit zoom to handle walk-forward scroll zoom ourselves
     controls.enabled = false; // start disabled, toggleable via state
     controlsRef.current = controls;
 
@@ -237,6 +261,23 @@ export default function RoomTour() {
     };
     window.addEventListener("wheel", handleBlockScroll, { passive: false });
     window.addEventListener("touchmove", handleBlockScroll, { passive: false });
+
+    // Custom first-person zoom/dolly along look vector in Explorer Mode
+    const handleWheelInExplorer = (e) => {
+      if (!explorerModeRef.current) return;
+      
+      e.preventDefault();
+      
+      // Calculate look direction of camera
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion).normalize();
+      
+      // Translate both camera and controls target along look direction (dolly speed 0.0015 for precise walk speed)
+      const step = -e.deltaY * 0.0015;
+      camera.position.addScaledVector(forward, step);
+      controls.target.addScaledVector(forward, step);
+      controls.update();
+    };
+    window.addEventListener("wheel", handleWheelInExplorer, { passive: false });
 
     const camState = camStateRef.current;
     camera.position.set(camState.x, camState.y, camState.z);
@@ -384,15 +425,22 @@ export default function RoomTour() {
     const handleDragMove = (e) => {
       if (!isDraggingRef.current || explorerModeRef.current) return;
       
+      // On touch devices, prevent default scrolling so the user can look around
+      // without accidentally scrolling to the next section
+      if (e.touches && e.cancelable) {
+        e.preventDefault();
+      }
+      
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       
       const deltaX = clientX - previousMousePositionRef.current.x;
       const deltaY = clientY - previousMousePositionRef.current.y;
       
-      // Update look rotation angles
-      dragRotationRef.current.y -= deltaX * 0.003;
-      dragRotationRef.current.x = Math.max(-0.9, Math.min(0.9, dragRotationRef.current.x - deltaY * 0.003));
+      // Update look rotation angles (higher sensitivity on mobile for easier look-around)
+      const sensitivity = isMobileRef.current ? 0.003 : 0.001;
+      dragRotationRef.current.y -= deltaX * sensitivity;
+      dragRotationRef.current.x = Math.max(-0.9, Math.min(0.9, dragRotationRef.current.x - deltaY * sensitivity));
       
       previousMousePositionRef.current = { x: clientX, y: clientY };
     };
@@ -406,7 +454,8 @@ export default function RoomTour() {
     window.addEventListener("mouseup", handleDragEnd);
     
     window.addEventListener("touchstart", handleDragStart, { passive: true });
-    window.addEventListener("touchmove", handleDragMove, { passive: true });
+    // Must be non-passive so we can preventDefault to stop page scroll during look-around
+    window.addEventListener("touchmove", handleDragMove, { passive: false });
     window.addEventListener("touchend", handleDragEnd);
 
     // --- Render Loop ---
@@ -475,7 +524,12 @@ export default function RoomTour() {
 
     // --- Resize handler ---
     const handleResize = () => {
+      isMobileRef.current = window.innerWidth <= 768;
       camera.aspect = window.innerWidth / window.innerHeight;
+      // Update FOV dynamically on resize/orientation change
+      if (!explorerModeRef.current) {
+        camera.fov = isMobileRef.current ? 90 : 75;
+      }
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
@@ -493,6 +547,11 @@ export default function RoomTour() {
       window.removeEventListener("touchend", handleDragEnd);
       window.removeEventListener("wheel", handleBlockScroll);
       window.removeEventListener("touchmove", handleBlockScroll);
+      window.removeEventListener("wheel", handleWheelInExplorer);
+      
+      // Ensure scrollbar is restored on component unmount
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
       
       cancelAnimationFrame(animationFrameId);
 
@@ -531,7 +590,7 @@ export default function RoomTour() {
   return (
     <div ref={containerRef} className="scrollytelling-container">
       {/* 3D WebGL Canvas */}
-      <div className="canvas-wrapper">
+      <div className={`canvas-wrapper ${explorerMode ? "interactive" : ""}`}>
         <canvas ref={canvasRef} className="webgl-canvas" />
       </div>
 
@@ -610,7 +669,7 @@ export default function RoomTour() {
           <div className="glass-card">
             <h2>Phòng Khách & Bếp</h2>
             <p>
-              Hành trình vòng tròn khép kín hoàn tất. Bạn đã quay trở lại phòng khách và bếp. Tiếp tục cuộn chuột để bắt đầu vòng tuần hoàn tiếp theo!
+              Không gian sinh hoạt chung rộng rãi nằm ở nửa trước căn hộ, kết hợp hài hòa giữa phòng khách tiện nghi tràn ngập ánh sáng và bếp ăn ấm cúng.
             </p>
           </div>
         </section>
@@ -641,7 +700,7 @@ export default function RoomTour() {
           className={`explorer-toggle-btn ${explorerMode ? "active" : ""}`}
           onClick={() => setExplorerMode(!explorerMode)}
         >
-          {explorerMode ? "CLOSE EXPLORER" : "EXPLORER MODE"}
+          {explorerMode ? "Tắt chế độ tham quan" : "Chế độ tham quan"}
         </button>
 
         {/* Scroll Progress indicators (hidden in explorer) */}
