@@ -24,6 +24,7 @@ body {
   -webkit-font-smoothing: antialiased;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scroll-snap-type: y mandatory;
 }
 
 /* Custom Scrollbar for premium feel */
@@ -137,6 +138,8 @@ body {
   align-items: center;
   padding-left: 8%;
   padding-right: 8%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
 }
 
 /* Align cards differently on scroll to keep layout dynamic */

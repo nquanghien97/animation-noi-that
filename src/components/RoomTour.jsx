@@ -300,12 +300,6 @@ export default function RoomTour() {
       scrub: 2.5, // Increased from 1.5 to 2.5 for a slower, heavier cinematic camera glide
       animation: scrollTl,
       invalidateOnRefresh: true,
-      snap: {
-        snapTo: 1 / 6,
-        duration: { min: 0.3, max: 0.8 }, // Slower snap animation
-        delay: 0.1,
-        ease: "power2.out",
-      },
       onLeave: (self) => {
         isLoopJumping = true;
         
