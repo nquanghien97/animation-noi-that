@@ -34,6 +34,9 @@ export default function RoomTour() {
   const isDraggingRef = useRef(false);
   const dragRotationRef = useRef({ x: 0, y: 0 });
   const previousMousePositionRef = useRef({ x: 0, y: 0 });
+  // Touch direction lock: null = undecided, 'horizontal' = look-around, 'vertical' = scroll
+  const touchDirectionRef = useRef(null);
+  const touchStartPosRef = useRef({ x: 0, y: 0 });
   const lastScrollYRef = useRef(0);
   
   // Shared state of camera position for animation
@@ -414,25 +417,45 @@ export default function RoomTour() {
     window.addEventListener("mousemove", handleMouseMove);
 
     // --- Drag Look-around Handlers ---
+    const DIRECTION_LOCK_THRESHOLD = 8; // px before we decide horizontal vs vertical
+
     const handleDragStart = (e) => {
       if (explorerModeRef.current) return;
       isDraggingRef.current = true;
+      touchDirectionRef.current = null; // reset direction lock for new gesture
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       previousMousePositionRef.current = { x: clientX, y: clientY };
+      touchStartPosRef.current = { x: clientX, y: clientY };
     };
 
     const handleDragMove = (e) => {
       if (!isDraggingRef.current || explorerModeRef.current) return;
       
-      // On touch devices, prevent default scrolling so the user can look around
-      // without accidentally scrolling to the next section
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      // --- Direction lock logic for touch ---
+      if (e.touches && touchDirectionRef.current === null) {
+        const totalDX = Math.abs(clientX - touchStartPosRef.current.x);
+        const totalDY = Math.abs(clientY - touchStartPosRef.current.y);
+        // Wait until we have enough movement to determine intent
+        if (totalDX < DIRECTION_LOCK_THRESHOLD && totalDY < DIRECTION_LOCK_THRESHOLD) {
+          return; // not enough movement yet, wait
+        }
+        // Lock direction based on dominant axis
+        touchDirectionRef.current = totalDX >= totalDY ? 'horizontal' : 'vertical';
+      }
+
+      // If locked to vertical on touch, allow default scroll and skip look-around
+      if (e.touches && touchDirectionRef.current === 'vertical') {
+        return;
+      }
+
+      // Horizontal gesture on touch → block scroll, apply look-around
       if (e.touches && e.cancelable) {
         e.preventDefault();
       }
-      
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       
       const deltaX = clientX - previousMousePositionRef.current.x;
       const deltaY = clientY - previousMousePositionRef.current.y;
@@ -447,6 +470,7 @@ export default function RoomTour() {
 
     const handleDragEnd = () => {
       isDraggingRef.current = false;
+      touchDirectionRef.current = null; // reset for next gesture
     };
 
     window.addEventListener("mousedown", handleDragStart);
