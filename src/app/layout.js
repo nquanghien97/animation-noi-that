@@ -6,6 +6,12 @@ export const metadata = {
   description: "An interactive 3D scrollytelling room tour built with Next.js, Three.js, and GSAP.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 const beVietNam = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
   weight: ["100", "300", "400", "500", "700", "900"],
