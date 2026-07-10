@@ -21,7 +21,7 @@ const beVietNam = Be_Vietnam_Pro({
 
 export default function RootLayout({ children }) {
   return (
-    <html className={beVietNam.variable} lang="vi">
+    <html className={beVietNam.variable} lang="vi" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

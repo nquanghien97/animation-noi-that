@@ -46,7 +46,6 @@ body {
   position: relative;
   width: 100%;
   height: 700vh;
-  height: 700dvh;
 }
 
 /* Canvas wrapper is pinned fixed to the screen */
@@ -134,7 +133,6 @@ body {
 .narrative-section {
   width: 100%;
   height: 100vh;
-  height: 100dvh;
   display: flex;
   align-items: center;
   padding-left: 8%;
@@ -425,11 +423,11 @@ body {
     padding-left: 16px;
     padding-right: 16px;
     justify-content: center !important;
-    /* Position cards at the bottom so the 3D model is visible above */
-    align-items: flex-end;
-    /* Extra bottom padding to clear mobile browser bottom bar */
-    padding-bottom: env(safe-area-inset-bottom, 16px);
-    padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 24px);
+    /* Position cards at the top */
+    align-items: flex-start;
+    /* Extra top padding to clear fixed logo and explorer button */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 72px);
+    padding-bottom: 0;
   }
   .glass-card {
     padding: 20px 18px;
@@ -510,7 +508,8 @@ body {
   .narrative-section {
     padding-left: 12px;
     padding-right: 12px;
-    padding-bottom: 16px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 60px);
+    padding-bottom: 0;
   }
   .glass-card {
     padding: 16px 14px;
